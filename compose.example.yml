@@ -1,0 +1,70 @@
+# Example Docker Compose configuration for colk-uv-distroless-python
+#
+# Usage:
+#   Development:  docker compose -f compose.example.yml up dev
+#   Production:   docker compose -f compose.example.yml up app
+#   Testing:      docker compose -f compose.example.yml run --rm test
+#
+# Copy this file to compose.yml and customize for your project.
+
+services:
+  # Production service - distroless, minimal, secure
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
+      target: runner
+      args:
+        PYTHON_VERSION: "3.14"
+    # Replace with your application's entrypoint
+    command: ["python", "-m", "your_app"]
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    # Uncomment to add health check (requires /health endpoint in your app)
+    # healthcheck:
+    #   test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 10s
+
+  # Development service - Ubuntu-based with shell access
+  dev:
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
+      target: developer
+      args:
+        PYTHON_VERSION: "3.14"
+    volumes:
+      # Mount source code for live reloading
+      - .:/opt/app:cached
+      # Preserve virtual environment
+      - venv:/opt/venv
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    # Override default sleep command with your dev server
+    # command: ["python", "-m", "your_app", "--reload"]
+
+  # Test service - distroless with dev dependencies
+  test:
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
+      target: tester
+      args:
+        PYTHON_VERSION: "3.14"
+    # Replace with your test command
+    command: ["python", "-m", "pytest"]
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  venv:
